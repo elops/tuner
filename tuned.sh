@@ -48,15 +48,15 @@ sysctl_set() {
     sysctl -w "$setting=$value"
     # update sysctl.conf if necessary
     if egrep -q "^\s*$setting\ " /etc/sysctl.conf; then
-      sed -i.bak -e "s/^\s*$setting.*/# updated by site5-tuned.sh script on $(date)\n$setting = $value/" /etc/sysctl.conf 
+      sed -i.bak -e "s/^\s*$setting.*/# updated to '$value' by site5-tuned.sh script on $(date)\n$setting = $value\n/" /etc/sysctl.conf 
     else
-      echo -en "# set by site5-tuned.sh script on $(date)\n$setting = $value\n" >> /etc/sysctl.conf
+      echo -en "# set to '$value' by site5-tuned.sh script on $(date)\n$setting = $value\n\n" >> /etc/sysctl.conf
     fi
   fi
 }
 
 debug() {
-  echo "$@" 1>2
+  echo "$@" 1>&2
 }
 
 ## script starts here
@@ -86,8 +86,10 @@ fi
 # is system virtual machine or physical server? 
 if [ -e /sys/hypervisor/uuid ]; then
   if egrep -q 00000000-0000-0000-0000-000000000000 /sys/hypervisor/uuid; then
+    debug ">> Hypervisor detected"
     hypervisor=1    
   else
+    debug ">> Xen guest detected"
     xen=1
   fi
 fi
@@ -97,11 +99,6 @@ declare -a device_list=($(find /dev/disk/by-id/ ! -name '*-part*' -type l | whil
   do
     basename $(readlink -f "$link")
   done | sort | uniq))
-
-for device in  "${device_list[@]}"
-do
-  echo ">> $device"
-done
 
 ## Making a change...
 
@@ -132,7 +129,7 @@ sysctl_set kernel.sched_latency_ns 24000000
 #  vm.overcommit_memory = 2          # strict memory accounting; we wont allow memory overuse to avoid memory hogs when under pressure
 #  vm.overcommit_ratio = 200         # based on observation this ratio is sane ceil value which can be allowed without experiencing mem hogs
 
-if [ "$total_memory" -le "$low_memory_system" ]; then
+if [ "$total_memory" -le "$low_memory_limit" ]; then
   debug "Detected $total_memory which is based on our config low, applying low mem environment tunables"
   debug " * Setting vfs_cache_pressure to higher value to spare some mem which is sitting unused in slabs"
   sysctl_set vm.vfs_cache_pressure 200
@@ -152,3 +149,8 @@ fi
 
 # TODO
 # sysfs settings for disk scheduler
+for device in  "${device_list[@]}"
+do
+  debug ">> Tuning $device"
+  
+done
