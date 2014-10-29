@@ -1,6 +1,7 @@
 #!/bin/bash -E
 
-# PATH
+# PATH to ensure we are not tricked into executing some weird binaries
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # defaults
 low_memory_limit=12582912     # consider systems below or equal to this mem a low mem system
@@ -8,6 +9,7 @@ lock_dir_created=0
 lock_dir='/tmp/being-tuned'
 hypervisor=0
 xen=0
+debug=0
 
 ## Functions
 _unlock() {
@@ -64,9 +66,10 @@ sysfs_set() {
   fi
 } 
 
-
 debug() {
-  echo "$@" 1>&2
+  if [ "$debug" -eq 1 ]; then
+    echo "$@" 1>&2
+  fi
 }
 
 ## script starts here
