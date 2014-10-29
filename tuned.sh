@@ -55,6 +55,16 @@ sysctl_set() {
   fi
 }
 
+sysfs_set() {
+  setting="$1"
+  value="$2"
+  if [ "$(cat "$setting")" -ne "$value" ]; then
+    debug "Setting $setting to $value"
+    echo "$value" > "$setting"
+  fi
+} 
+
+
 debug() {
   echo "$@" 1>&2
 }
@@ -147,10 +157,17 @@ fi
 # (total RAM - 2 GB / avg process usage) * 1.1 to allow for some slack room
 # ensure requests per sec are below half of what we want to set as limit; else report
 
-# TODO
 # sysfs settings for disk scheduler
 for device in  "${device_list[@]}"
 do
   debug ">> Tuning $device"
-  
+  # Favor reads more than writes and do smaller batches to improve latency
+  # increase wait time for writes for latency and read efficiency 
+  sysfs_set /sys/block/"$device"/queue/iosched/write_expire 30000
+  # we do way more reads than writes; adjust ratio accordingly
+  sysfs_set /sys/block/"$device"/queue/iosched/writes_starved 5
+  # shorter request batches for latency
+  sysfs_set /sys/block/"$device"/queue/nr_requests 32
+  # improve read throughput
+  sysfs_set /sys/block/"$device"/queue/read_ahead_kb 1024
 done
