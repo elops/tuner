@@ -134,6 +134,9 @@ sysctl_set kernel.sched_wakeup_granularity_ns 15000000
 # default : 24000000
 sysctl_set kernel.sched_latency_ns 24000000
 
+# adjust vm.min_free_kbytes
+sysctl_set vm.min_free_kbytes 32768
+
 ## changed that depend on system profile
 # if <= 12 GB RAM 
 #  vm.vfs_cache_pressure = 200       # (don't let SLABS eat little RAM we have)
